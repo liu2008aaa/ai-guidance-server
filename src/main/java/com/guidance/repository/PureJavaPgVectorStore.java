@@ -300,7 +300,7 @@ public class PureJavaPgVectorStore implements EmbeddingStore<TextSegment> {
      * @return
      */
     private boolean isContentExists(String hash) {
-        String sql = "SELECT 1 FROM embeddings WHERE content_hash = ? LIMIT 1";
+        String sql = "SELECT 1 FROM " + table + " WHERE content_hash = ? LIMIT 1";
         try (Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, hash);
