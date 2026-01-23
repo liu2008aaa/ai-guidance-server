@@ -95,16 +95,15 @@ public class PureJavaPgVectorStore implements EmbeddingStore<TextSegment> {
             throw new IllegalArgumentException("textSegments size mismatch");
         }
 
-        String sql = String.format(
-            "INSERT INTO %s (id, embedding, text_content, metadata_json,content_hash) " +
-            "VALUES (?, ?, ?, ?,?) " +
+        String sql =
+            "INSERT INTO " + table + " (id, embedding, text_content, metadata_json,content_hash) " +
+            "VALUES (?, ?, ?, ?, ?) " +
             "ON CONFLICT (id) DO UPDATE SET " +
             "embedding = EXCLUDED.embedding, " +
             "text_content = EXCLUDED.text_content, " +
-            "metadata_json = EXCLUDED.metadata_json,",
-            "content_hash = EXCLUDED.content_hash",
-            table
-        );
+            "metadata_json = EXCLUDED.metadata_json, " +
+            "content_hash = EXCLUDED.content_hash "
+        ;
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

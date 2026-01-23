@@ -72,7 +72,7 @@ public class KnowledgeService {
         if(CollectionUtils.isEmpty(infoList)){
             return;
         }
-        //遍历每个 市
+        //遍历每个区域
         for(AreaInfo areaInfo : infoList){
             try {
                 //设置为：上一级+1
@@ -192,10 +192,14 @@ public class KnowledgeService {
         if(CollectionUtils.isEmpty(segments)){
             return;
         }
-        Response<List<Embedding>> embeddingsResponse = embeddingModel.embedAll(segments);
-        log.debug("Finished embedding {} text segments", segments.size());
-        // TODO handle failures, parallelize
-        log.debug("Starting to store {} text segments into the embedding store", segments.size());
-        embeddingStore.addAll(embeddingsResponse.content(), segments);
+        try {
+            Response<List<Embedding>> embeddingsResponse = embeddingModel.embedAll(segments);
+            log.debug("Finished embedding {} text segments", segments.size());
+            // TODO handle failures, parallelize
+            log.debug("Starting to store {} text segments into the embedding store", segments.size());
+            embeddingStore.addAll(embeddingsResponse.content(), segments);
+        }catch (Exception e){
+            log.error("persist has error",e);
+        }
     }
 }
