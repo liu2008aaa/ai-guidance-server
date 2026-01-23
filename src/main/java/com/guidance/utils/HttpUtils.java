@@ -37,7 +37,6 @@ public class HttpUtils {
                     .header("Accept", "application/json")
                     .build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            System.out.println(response.body());  // 纯 JSON
             return response.body();
         } catch (IOException e) {
             log.error("getByHttp data has error",e);
