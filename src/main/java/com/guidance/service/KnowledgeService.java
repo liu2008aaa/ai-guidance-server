@@ -4,17 +4,14 @@ import com.guidance.service.crawler.GovGuideParser;
 import com.guidance.service.crawler.SichuanGuideDataCrawler;
 import com.guidance.service.crawler.vo.AreaInfo;
 import com.guidance.service.crawler.vo.SummaryInfo;
-import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
 import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
-import dev.langchain4j.data.segment.TextSegment;
-//import org.jsoup.Jsoup;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -22,6 +19,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.guidance.service.crawler.SichuanGuideDataCrawler.*;
 
@@ -31,61 +30,33 @@ public class KnowledgeService {
     private final EmbeddingStore<TextSegment> embeddingStore;
     private final EmbeddingModel embeddingModel;
 
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
     public KnowledgeService(EmbeddingStore<TextSegment> embeddingStore, 
                             EmbeddingModel embeddingModel) {
         this.embeddingStore = embeddingStore;
         this.embeddingModel = embeddingModel;
     }
 
-    // 模拟应用启动时自动加载数据 (生产环境通常是异步任务或后台管理触发)
-    public void initKnowledgeBase() {
-        System.out.println(">>> 开始初始化知识库...");
-        crawlAndIngest("https://www.gov.cn/zhengce/jiedu/2020-09/16/content_5543867.htm", "教师资格认定");
-        // 这里可以循环读取配置文件中的 URLs
-    }
-
-    public void crawlAndIngest(String url, String serviceName) {
-        try {
-//            // 简单爬虫逻辑
-//            org.jsoup.nodes.Document jsoupDoc = Jsoup.connect(url)
-//                    .timeout(15000)
-//                    .userAgent("Mozilla/5.0")
-//                    .get();
-//
-//            String text = jsoupDoc.body().text(); // 粗糙提取，实际需根据DOM精修
-//
-//            Map<String,String> metaMap = new HashMap<>();
-//            metaMap.put("province", "四川省");
-//            metaMap.put("city", "成都市");
-//            metaMap.put("district", "锦江区");
-//            metaMap.put("street", "春熙路街道");
-//            metaMap.put("community", "督院街社区");
-//            metaMap.put("full_path", "四川省/成都市/锦江区/春熙路街道/督院街社区");
-//            metaMap.put("url", "https://www.sczwfw.gov.cn/jiq/front/transition/ywTransToDetail?areaCode=510104000000&itemCode=511A0138900000-510104000000-000-22221111-1-00&taskType=1&deptCode=22221111");
-//            Metadata metadata = Metadata.from(metaMap);
-//
-//            Document document = Document.from(text,metadata);
-//
-//            // 数据切分与入库
-//            EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
-//                    .embeddingModel(embeddingModel)
-//                    .embeddingStore(embeddingStore)
-//                    .build();
-//
-//            ingestor.ingest(document);
-//            System.out.println(">>> [爬虫] 已摄入: " + serviceName);
-            //获取省下所有市编码
-            List<AreaInfo> infoList = SichuanGuideDataCrawler.fetchAreaInfo(AREA_CODE_SICHUAN);
-            if(CollectionUtils.isEmpty(infoList)){
-                return;
+    /**
+     * 入口
+     */
+    @PostConstruct
+    public void crawlAndIngest() {
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(15000L);
+                    AreaInfo parentArea = new AreaInfo();
+                    parentArea.setName("四川省");
+                    parentArea.setCode(AREA_CODE_SICHUAN);
+                    start(parentArea);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
-            //遍历每个 市
-            for(AreaInfo areaInfo : infoList){
-
-            }
-        } catch (Exception e) {
-           log.error(">>> [错误] 爬取失败: " + url,e);
-        }
+        });
     }
 
     /**
@@ -93,7 +64,7 @@ public class KnowledgeService {
      *
      * @param parentArea
      */
-    public void processAreaInfo(AreaInfo parentArea) throws InterruptedException {
+    public void start(AreaInfo parentArea) throws InterruptedException {
         //抓取编码下的子集区域编码信息
         List<AreaInfo> infoList = SichuanGuideDataCrawler.fetchAreaInfo(parentArea.getCode());
         if(CollectionUtils.isEmpty(infoList)){
@@ -101,19 +72,23 @@ public class KnowledgeService {
         }
         //遍历每个 市
         for(AreaInfo areaInfo : infoList){
-            //设置为：上一级+1
-            int nextLevel = parentArea.getLevel()+1;
-            areaInfo.setLevel(nextLevel);
-            log.info("start process level:{},name:{}",areaInfo.getLevel(),areaInfo.getName());
-            //设置区域名称
-            String[] names = areaInfo.getNames();
-            names[nextLevel] = areaInfo.getName();
-            //重新赋值
-            areaInfo.setNames(names);
-            //处理
-            innerProcess(areaInfo);
+            try {
+                //设置为：上一级+1
+                int nextLevel = parentArea.getLevel() + 1;
+                areaInfo.setLevel(nextLevel);
+                log.info("start process level:{},name:{}", areaInfo.getLevel(), areaInfo.getName());
+                //设置区域名称
+                String[] names = areaInfo.getNames();
+                names[nextLevel] = areaInfo.getName();
+                //重新赋值
+                areaInfo.setNames(names);
+                //处理
+                innerProcess(areaInfo);
+            }catch (Exception e){
+                log.error("process has error",e);
+            }
             //递归该区域的下级
-            processAreaInfo(areaInfo);
+            start(areaInfo);
         }
     }
 
