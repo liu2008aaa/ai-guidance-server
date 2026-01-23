@@ -4,6 +4,7 @@ import com.guidance.service.crawler.GovGuideParser;
 import com.guidance.service.crawler.SichuanGuideDataCrawler;
 import com.guidance.service.crawler.vo.AreaInfo;
 import com.guidance.service.crawler.vo.SummaryInfo;
+import com.guidance.utils.StringUtils;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -43,18 +44,19 @@ public class KnowledgeService {
      */
     @PostConstruct
     public void crawlAndIngest() {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(15000L);
-                    AreaInfo parentArea = new AreaInfo();
-                    parentArea.setName("四川省");
-                    parentArea.setCode(AREA_CODE_SICHUAN);
-                    start(parentArea);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+        executor.execute(() -> {
+            try {
+                Thread.sleep(15000L);
+                AreaInfo parentArea = new AreaInfo();
+                String areaName = "四川省";
+                parentArea.setName(areaName);
+                parentArea.setCode(AREA_CODE_SICHUAN);
+                String[] names = new String[5];
+                names[0] = areaName;
+                parentArea.setNames(names);
+                start(parentArea);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         });
     }
@@ -78,7 +80,7 @@ public class KnowledgeService {
                 areaInfo.setLevel(nextLevel);
                 log.info("start process level:{},name:{}", areaInfo.getLevel(), areaInfo.getName());
                 //设置区域名称
-                String[] names = areaInfo.getNames();
+                String[] names = parentArea.getNames();
                 names[nextLevel] = areaInfo.getName();
                 //重新赋值
                 areaInfo.setNames(names);
@@ -153,11 +155,12 @@ public class KnowledgeService {
     private List<TextSegment> makeTextSegments(AreaInfo areaInfo,GovGuideParser.GuideInfo guideInfo){
         //构造meta data
         Map<String,String> metaMap = new HashMap<>();
-        metaMap.put("province", areaInfo.getNames()[0]);
-        metaMap.put("city", areaInfo.getNames()[1]);
-        metaMap.put("district", areaInfo.getNames()[2]);
-        metaMap.put("street", areaInfo.getNames()[3]);
-        metaMap.put("community", areaInfo.getNames()[4]);
+        String[] names = areaInfo.getNames();
+        metaMap.put("province", StringUtils.getStringValue(names[0]));
+        metaMap.put("city", StringUtils.getStringValue(names[1]));
+        metaMap.put("district", StringUtils.getStringValue(names[2]));
+        metaMap.put("street", StringUtils.getStringValue(names[3]));
+        metaMap.put("community", StringUtils.getStringValue(names[4]));
         metaMap.put("full_path", String.join("/", areaInfo.getNames()));
         metaMap.put("title", guideInfo.getTitle());
         metaMap.put("url", guideInfo.getUrl());
