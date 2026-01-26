@@ -208,8 +208,11 @@ public class PureJavaPgVectorStore implements EmbeddingStore<TextSegment> {
 
                     String id = rs.getString("id");
                     Array embeddingArray = rs.getArray("embedding");
-                    Float[] floats = (Float[]) embeddingArray.getArray();
-                    float[] vector = toPrimitive(floats);
+                    Double[] doubleObjects = (Double[]) embeddingArray.getArray();
+                    float[] vector = new float[doubleObjects.length];
+                    for (int i = 0; i < doubleObjects.length; i++) {
+                        vector[i] = doubleObjects[i].floatValue(); // Double → float
+                    }
                     Embedding embedding = Embedding.from(vector);
 
                     String text = rs.getString("text_content");

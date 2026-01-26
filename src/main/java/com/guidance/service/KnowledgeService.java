@@ -42,7 +42,7 @@ public class KnowledgeService {
     /**
      * 入口
      */
-    @PostConstruct
+//    @PostConstruct
     public void crawlAndIngest() {
         executor.execute(() -> {
             try {
