@@ -13,6 +13,9 @@ import dev.langchain4j.model.output.Response;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -25,6 +28,7 @@ import java.util.concurrent.Executors;
 
 import static com.guidance.service.crawler.SichuanGuideDataCrawler.*;
 
+@ConditionalOnProperty(name = "crawl.enable", havingValue = "true")
 @Service
 @Slf4j
 public class KnowledgeService {
@@ -42,7 +46,7 @@ public class KnowledgeService {
     /**
      * 入口
      */
-//    @PostConstruct
+    @PostConstruct
     public void crawlAndIngest() {
         executor.execute(() -> {
             try {
@@ -166,21 +170,25 @@ public class KnowledgeService {
         metaMap.put("url", guideInfo.getUrl());
         Metadata metadata = Metadata.from(metaMap);
         //给内容定义相同的事项title
-        String title = "[事项] " + guideInfo.getTitle() + "\n\n";
+        String title = "[事项] " + guideInfo.getTitle() + "\n";
         //构造Segment
         List<TextSegment> textSegmentList = new ArrayList<>();
+
         //基本信息
-        textSegmentList.add(new TextSegment(title + guideInfo.getServiceInfo().toText() + "\n" + guideInfo.getBasicInfo().toText(),metadata));
+        textSegmentList.add(new TextSegment(title + "办理时间: \n" + guideInfo.getServiceInfo().getProcessingTime(),metadata));
+        textSegmentList.add(new TextSegment(title + "办理地点: \n" + guideInfo.getServiceInfo().getProcessingLocation(),metadata));
+        textSegmentList.add(new TextSegment(title + "咨询方式: \n" + guideInfo.getServiceInfo().getConsultationMethod(),metadata));
         //材料清单
         textSegmentList.add(new TextSegment(title + guideInfo.getMaterialsText(),metadata));
         //处理流程
-        textSegmentList.add(new TextSegment(title + guideInfo.getProcessStepsText(),metadata));
+//        textSegmentList.add(new TextSegment(title + guideInfo.getProcessStepsText(),metadata));
         //收费标准
         textSegmentList.add(new TextSegment(title + guideInfo.getFeeStandardText(),metadata));
         //受理条件
         textSegmentList.add(new TextSegment(title + guideInfo.getAcceptanceConditionsText(),metadata));
         //常见问题
-        textSegmentList.add(new TextSegment(title + guideInfo.getFaqText(),metadata));
+//        textSegmentList.add(new TextSegment(title + guideInfo.getFaqText(),metadata));
+        textSegmentList.add(new TextSegment(title + "引用地址：\n" + guideInfo.getUrl(),metadata));
         return textSegmentList;
     }
     /**

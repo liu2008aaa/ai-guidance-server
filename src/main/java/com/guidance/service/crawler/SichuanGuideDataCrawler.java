@@ -117,7 +117,7 @@ public class SichuanGuideDataCrawler {
     public static List<SummaryInfo> fetchSummaryInfo(String api,String code,int pageNo,List<SummaryInfo> totalList){
         try{
             String url = String.format(api,code,pageNo);
-            log.debug("fetchSummaryInfo.url:{}",url);
+            log.info("fetchSummaryInfo.pageNo:{},url:{}",pageNo,url);
             String htmlTxt = HttpUtils.getByHttp(url);
             if(ObjectUtils.isEmpty(htmlTxt) || htmlTxt.trim().isBlank()){
                 return totalList;

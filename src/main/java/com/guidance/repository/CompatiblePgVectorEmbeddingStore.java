@@ -8,6 +8,7 @@ import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.postgresql.util.PGobject;
 
 import javax.sql.DataSource;
@@ -48,7 +49,8 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
                     "id TEXT PRIMARY KEY, " +
                     "embedding vector(%d), " +
                     "text_content TEXT, " +
-                    "metadata_json TEXT" +
+                    "metadata_json TEXT," +
+                    "content_hash TEXT" +
                 ")",
                 table, dimension
             );
@@ -106,15 +108,14 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
             throw new IllegalArgumentException("textSegments size mismatch");
         }
 
-        String sql = String.format(
-            "INSERT INTO %s (id, embedding, text_content, metadata_json) " +
-            "VALUES (?, ?::vector, ?, ?) " +
+        String sql =
+            "INSERT INTO " + table + " (id, embedding, text_content, metadata_json,content_hash) " +
+            "VALUES (?, ?::vector, ?, ?,?) " +
             "ON CONFLICT (id) DO UPDATE SET " +
             "embedding = EXCLUDED.embedding, " +
             "text_content = EXCLUDED.text_content, " +
-            "metadata_json = EXCLUDED.metadata_json",
-            table
-        );
+            "metadata_json = EXCLUDED.metadata_json, " +
+            "content_hash = EXCLUDED.content_hash";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -123,11 +124,18 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
                 ps.setString(1, ids.get(i));
                 ps.setString(2, vectorToString(embeddings.get(i).vector()));
                 if (textSegments != null && textSegments.get(i) != null) {
+                    //元数据+原始数据的hash
+                    String hash = DigestUtils.md5Hex(textSegments.get(i).metadata().toString() + textSegments.get(i).text());
+                    if(isContentExists(hash)){
+                        continue;
+                    }
                     ps.setString(3, textSegments.get(i).text());
                     ps.setString(4, serializeMetadata(textSegments.get(i).metadata()));
+                    ps.setString(5, hash);
                 } else {
                     ps.setNull(3, Types.VARCHAR);
                     ps.setNull(4, Types.VARCHAR);
+                    ps.setNull(5, Types.VARCHAR);
                 }
                 ps.addBatch();
             }
@@ -234,5 +242,22 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
     private String serializeMetadata(Metadata metadata) {
         if (metadata == null) return "{}";
         return JsonUtils.toJson(metadata);
+    }
+    /**
+     * 查询数据hash是否已存在
+     * @param hash
+     * @return
+     */
+    private boolean isContentExists(String hash) {
+        String sql = "SELECT 1 FROM " + table + " WHERE content_hash = ? LIMIT 1";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, hash);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs!=null && rs.next();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("isContentExists failed", e);
+        }
     }
 }

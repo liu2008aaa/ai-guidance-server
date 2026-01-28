@@ -89,9 +89,10 @@ public class AIModelConfig {
      */
     @Bean
     EmbeddingStore<TextSegment> embeddingStore(DataSource dataSource) {
-        return new PureJavaPgVectorStore(dataSource,
-                pgTable,
-                pgDimension);
+//        return new PureJavaPgVectorStore(dataSource,
+//                pgTable,
+//                pgDimension);
+        return new CompatiblePgVectorEmbeddingStore(dataSource,pgTable,pgDimension);
     }
 
     /**
@@ -103,7 +104,7 @@ public class AIModelConfig {
         return EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
-                .maxResults(3)
+                .maxResults(20)//每次在向量数据库中返回的条数，太多容易浪费token，太少容易丢失精度
                 .minScore(0.6)
                 .build();
     }

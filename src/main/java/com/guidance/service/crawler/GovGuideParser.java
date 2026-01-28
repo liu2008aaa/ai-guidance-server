@@ -617,21 +617,30 @@ public class GovGuideParser {
          */
         public String getMaterialsText(){
             if(CollectionUtils.isEmpty(this.getMaterials())){
-                return "申请材料清单";
+                return "所需材料";
             }
             StringBuilder sb = new StringBuilder();
-            sb.append("申请材料清单");
-            TableBuilder tableBuilder = new TableBuilder(5,120, 5, 10, 10)
-                    .header("编号","名称", "必要性", "类型", "形式");
-            sb.append("\n");
-            List<Object[]> rows = new ArrayList<>();
+            sb.append("所需材料\n");
             int i = 1;
             for (Material material : this.getMaterials()) {
-                Object[] cells = new Object[]{i++,material.getName(),material.getNecessity(),material.getType(),material.getForm()};
-                rows.add(cells);
+                sb.append(i);
+                sb.append(".");
+                sb.append(material.getName());
+                sb.append("【"+material.getNecessity()+"】");
+                sb.append("【"+material.getType()+"】\n");
+                i++;
             }
-            tableBuilder.rows(rows);
-            sb.append(tableBuilder);
+//            TableBuilder tableBuilder = new TableBuilder(5,120, 5, 10, 10)
+//                    .header("编号","名称", "必要性", "类型", "形式");
+//            sb.append("\n");
+//            List<Object[]> rows = new ArrayList<>();
+//            int i = 1;
+//            for (Material material : this.getMaterials()) {
+//                Object[] cells = new Object[]{i++,material.getName(),material.getNecessity(),material.getType(),material.getForm()};
+//                rows.add(cells);
+//            }
+//            tableBuilder.rows(rows);
+//            sb.append(tableBuilder);
             return sb.toString();
         }
 
