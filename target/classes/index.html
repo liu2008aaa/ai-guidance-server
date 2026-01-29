@@ -9,19 +9,48 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f7fa; }
         .chat-container { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .message { padding: 10px 15px; border-radius: 8px; max-width: 80%; line-height: 1.6; word-wrap: break-word; }
-        .user { align-self: flex-end; background: #007bff; color: white; }
-        .ai { align-self: flex-start; background: #e9ecef; color: #333; }
+        .message { padding: 15px; border-radius: 8px; max-width: 85%; line-height: 1.6; word-wrap: break-word; }
+        .user { align-self: flex-end; background: linear-gradient(135deg, #007bff, #0056b3); color: white; }
+        .ai { align-self: flex-start; background: #f1f3f4; color: #202124; }
         .input-area { margin-top: 20px; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 5px; outline: none; }
-        button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        button:disabled { background: #ccc; }
-        .config { margin-bottom: 15px; font-size: 0.9em; color: #666; }
-        /* 优化 Markdown 渲染样式 */
-        .message.ai img { max-width: 100%; border-radius: 4px; }
-        .message.ai pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
-        .message.ai code { font-family: 'Courier New', monospace; background: #f1f3f5; padding: 2px 4px; border-radius: 3px; }
-        .message.ai blockquote { border-left: 3px solid #007bff; padding-left: 10px; margin-left: 0; color: #555; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 5px; outline: none; font-size: 14px; }
+        button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 500; transition: background 0.2s; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .config { margin-bottom: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em; color: #495057; }
+
+        /* Markdown 通用样式 */
+        .message h1, .message h2, .message h3, .message h4 { margin-top: 0.5em; margin-bottom: 0.3em; }
+        .message h1 { font-size: 1.4em; }
+        .message h2 { font-size: 1.3em; }
+        .message h3 { font-size: 1.2em; }
+        .message h4 { font-size: 1.1em; }
+        .message p { margin: 0.5em 0; }
+        .message ul, .message ol { padding-left: 1.5em; margin: 0.5em 0; }
+        .message li { margin: 0.3em 0; }
+        .message blockquote { margin: 0.5em 0; padding-left: 1em; border-left: 3px solid rgba(0,0,0,0.1); color: #555; }
+        .message hr { border: none; border-top: 1px solid rgba(0,0,0,0.1); margin: 1em 0; }
+
+        /* 用户消息中的 Markdown 样式 */
+        .message.user h1, .message.user h2, .message.user h3, .message.user h4 { color: #e6f2ff; }
+        .message.user a { color: #b3d7ff; text-decoration: underline; }
+        .message.user blockquote { border-left-color: rgba(255,255,255,0.3); color: #e6f2ff; }
+        .message.user code { background: rgba(255,255,255,0.2); color: #e6f2ff; }
+        .message.user pre { background: rgba(0,0,0,0.2); }
+
+        /* AI 消息中的 Markdown 样式 */
+        .message.ai h1, .message.ai h2, .message.ai h3, .message.ai h4 { color: #202124; }
+        .message.ai a { color: #1a73e8; text-decoration: underline; }
+        .message.ai a:hover { text-decoration: none; }
+        .message.ai img { max-width: 100%; border-radius: 4px; margin: 0.5em 0; }
+        .message.ai pre { background: #f8f9fa; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 0.5em 0; border: 1px solid #e9ecef; }
+        .message.ai code { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.9em; background: #f1f3f5; padding: 2px 6px; border-radius: 3px; color: #d63384; }
+        .message.ai pre code { background: transparent; padding: 0; color: inherit; }
+        .message.ai blockquote { border-left: 3px solid #007bff; padding-left: 12px; margin-left: 0; color: #555; background: rgba(0,123,255,0.05); padding-top: 4px; padding-bottom: 4px; }
+        .message.ai table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
+        .message.ai th, .message.ai td { border: 1px solid #dee2e6; padding: 8px; text-align: left; }
+        .message.ai th { background-color: #f8f9fa; font-weight: bold; }
+        .message.ai tr:nth-child(even) { background-color: #f8f9fa; }
     </style>
 </head>
 <body>
@@ -31,6 +60,7 @@
 <div class="config">
     当前会话 ID: <span id="chatIdDisplay" style="font-weight:bold"></span>
     <button onclick="resetChat()" style="padding: 5px 10px; font-size: 0.8em; margin-left: 10px; background: #6c757d;">重置会话</button>
+    <div style="margin-top: 5px; font-size: 0.85em;">提示：用户和AI消息都支持Markdown格式显示</div>
 </div>
 
 <div class="chat-container" id="chatBox">
@@ -38,7 +68,7 @@
 </div>
 
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="输入你的问题..." onkeypress="if(event.keyCode==13) sendMsg()">
+    <input type="text" id="msgInput" placeholder="输入你的问题（支持Markdown格式）..." onkeypress="if(event.keyCode==13) sendMsg()">
     <button onclick="sendMsg()" id="sendBtn">发送</button>
 </div>
 
@@ -46,27 +76,26 @@
     // 配置 marked：启用 GitHub 风格 Markdown 和单换行转 <br>
     marked.setOptions({
         breaks: true,  // 单换行转 <br>
-        gfm: true      // 启用 GitHub Flavored Markdown
+        gfm: true,     // 启用 GitHub Flavored Markdown
+        headerIds: false, // 不自动生成 header id
+        mangle: false  // 不自动转换 header 文本
     });
 
     // 生成或获取随机 ChatId
     let chatId = 'user_' + Math.random().toString(36).substr(2, 9);
-    //let chatId = localStorage.getItem('chatId') || 'user_' + Math.random().toString(36).substr(2, 9);
-    //localStorage.setItem('chatId', chatId);
     document.getElementById('chatIdDisplay').innerText = chatId;
 
     // 初始化欢迎消息（支持 Markdown）
     window.addEventListener('load', () => {
-        appendMessage('ai', '👋 你好！我是通义千问助手，支持 **Markdown** 格式输出：\n- 代码块 ```java System.out.println("Hello"); ```\n- 列表、链接等\n有什么可以帮你？');
+        appendMessage('ai', '👋 你好！我是通义千问助手，**所有消息都支持Markdown格式**：\n\n## 功能示例\n- **粗体文本** 和 *斜体文本*\n- `行内代码` 和 代码块\n- 列表、表格和引用\n- 数学公式：$E = mc^2$\n\n有什么可以帮你？');
     });
 
     function resetChat() {
         chatId = 'user_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('chatId', chatId);
         document.getElementById('chatIdDisplay').innerText = chatId;
         const chatBox = document.getElementById('chatBox');
         chatBox.innerHTML = '';
-        appendMessage('ai', '🔄 会话已重置。');
+        appendMessage('ai', '🔄 会话已重置。\n\n新的会话ID：`' + chatId + '`');
     }
 
     async function sendMsg() {
@@ -75,7 +104,7 @@
         const text = input.value.trim();
         if (!text) return;
 
-        // 添加用户消息（纯文本，防 XSS）
+        // 添加用户消息（使用Markdown渲染）
         appendMessage('user', text);
         input.value = '';
         btn.disabled = true;
@@ -85,6 +114,11 @@
         let aiResponseText = '';
 
         try {
+            // 模拟流式响应（实际使用时替换为您的API调用）
+            simulateStreamingResponse(text, aiMsgDiv, btn);
+
+            // 实际使用时取消注释以下代码，并删除上面的simulateStreamingResponse调用
+            /*
             const eventSource = new EventSource(`http://localhost:8080/api/chat/stream?chatId=${chatId}&message=${encodeURIComponent(text)}`);
 
             eventSource.onmessage = function(event) {
@@ -96,17 +130,7 @@
                 aiResponseText += token;
 
                 // 安全渲染 Markdown
-                try {
-                    const rawHtml = marked.parse(aiResponseText);
-                    aiMsgDiv.innerHTML = DOMPurify.sanitize(rawHtml, {
-                        ALLOWED_TAGS: [...DOMPurify.defaults.ALLOWED_TAGS, 'img'], // 允许图片（按需调整）
-                        ALLOWED_ATTR: [...DOMPurify.defaults.ALLOWED_ATTR, 'src', 'alt'] // 允许图片属性
-                    });
-                } catch (e) {
-                    // 降级为纯文本（保留换行）
-                    aiMsgDiv.innerText = aiResponseText;
-                    console.warn('Markdown 解析失败，降级为纯文本:', e);
-                }
+                renderMarkdown(aiMsgDiv, aiResponseText);
 
                 // 滚动到底部
                 document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
@@ -116,16 +140,28 @@
                 eventSource.close();
                 btn.disabled = false;
                 if (aiResponseText === '') {
-                    aiMsgDiv.innerHTML = DOMPurify.sanitize(marked.parse('⚠️ 连接中断，请重试。'));
+                    renderMarkdown(aiMsgDiv, '⚠️ 连接中断，请重试。');
                 }
             };
-
-            eventSource.onopen = function() {
-                // 可选：连接成功提示
-            };
+            */
         } catch (error) {
-            aiMsgDiv.innerHTML = DOMPurify.sanitize(marked.parse(`❌ 错误: ${error.message}`));
+            renderMarkdown(aiMsgDiv, `❌ 错误: ${error.message}`);
             btn.disabled = false;
+        }
+    }
+
+    // 渲染Markdown内容的辅助函数
+    function renderMarkdown(element, markdownText) {
+        try {
+            const rawHtml = marked.parse(markdownText);
+            element.innerHTML = DOMPurify.sanitize(rawHtml, {
+                ALLOWED_TAGS: [...DOMPurify.defaults.ALLOWED_TAGS, 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+                ALLOWED_ATTR: [...DOMPurify.defaults.ALLOWED_ATTR, 'src', 'alt', 'width', 'height', 'align']
+            });
+        } catch (e) {
+            // 降级为纯文本（保留换行）
+            element.textContent = markdownText;
+            console.warn('Markdown 解析失败，降级为纯文本:', e);
         }
     }
 
@@ -134,23 +170,40 @@
         const div = document.createElement('div');
         div.className = `message ${role}`;
 
-        if (role === 'user') {
-            // 用户消息：纯文本防 XSS
-            div.textContent = text;
-        } else {
-            // AI 消息：初始为空，由流式更新填充
-            if (text) {
-                try {
-                    div.innerHTML = DOMPurify.sanitize(marked.parse(text));
-                } catch {
-                    div.textContent = text;
-                }
-            }
+        // 为所有消息渲染Markdown格式
+        if (text) {
+            renderMarkdown(div, text);
         }
 
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
         return div;
+    }
+
+    // 模拟流式响应的函数（演示用，实际使用时删除）
+    function simulateStreamingResponse(userInput, aiMsgDiv, btn) {
+        const responses = [
+            "我理解了你的问题！\n\n你输入的是：\n```\n" + userInput + "\n```\n\n这是一个很好的问题。让我详细解释一下...",
+            "## 分析结果\n\n根据你的输入，我可以提供以下建议：\n\n1. **首先**，考虑问题的背景\n2. **其次**，分析相关因素\n3. **最后**，制定解决方案\n\n### 代码示例\n```python\ndef solution():\n    print('Hello, Markdown!')\n    return True\n```",
+            "### 总结\n\n这个问题的关键点包括：\n- 用户需求：`" + userInput + "`\n- 技术实现：使用 **Markdown** 格式展示\n- 用户体验：流式响应，实时渲染\n\n> 提示：所有消息都支持Markdown语法！"
+        ];
+
+        let responseIndex = 0;
+        const response = responses[Math.floor(Math.random() * responses.length)];
+        let currentText = '';
+        let charIndex = 0;
+
+        const interval = setInterval(() => {
+            if (charIndex < response.length) {
+                currentText += response.charAt(charIndex);
+                renderMarkdown(aiMsgDiv, currentText + (charIndex < response.length - 1 ? '▌' : ''));
+                charIndex++;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } else {
+                clearInterval(interval);
+                btn.disabled = false;
+            }
+        }, 30);
     }
 </script>
 </body>

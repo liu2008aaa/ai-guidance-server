@@ -17,11 +17,26 @@
         button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
         button:disabled { background: #ccc; }
         .config { margin-bottom: 15px; font-size: 0.9em; color: #666; }
-        /* 优化 Markdown 渲染样式 */
-        .message.ai img { max-width: 100%; border-radius: 4px; }
-        .message.ai pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
-        .message.ai code { font-family: 'Courier New', monospace; background: #f1f3f5; padding: 2px 4px; border-radius: 3px; }
-        .message.ai blockquote { border-left: 3px solid #007bff; padding-left: 10px; margin-left: 0; color: #555; }
+
+        /* 优化 Markdown 渲染样式 - 为所有消息统一设置 */
+        .message img { max-width: 100%; border-radius: 4px; }
+        .message pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .message code { font-family: 'Courier New', monospace; background: #f1f3f5; padding: 2px 4px; border-radius: 3px; }
+        .message blockquote { border-left: 3px solid #007bff; padding-left: 10px; margin-left: 0; color: #555; }
+        .message h1, .message h2, .message h3, .message h4 { margin-top: 0.5em; margin-bottom: 0.3em; }
+        .message ul, .message ol { padding-left: 1.5em; margin: 0.5em 0; }
+        .message li { margin: 0.2em 0; }
+        .message p { margin: 0.5em 0; }
+
+        /* 用户消息中的 Markdown 特殊样式 */
+        .message.user code { background: rgba(255,255,255,0.3); }
+        .message.user pre { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+        .message.user blockquote { border-left-color: rgba(255,255,255,0.7); color: rgba(255,255,255,0.9); }
+
+        /* AI 消息中的 Markdown 特殊样式 */
+        .message.ai code { background: #f1f3f5; color: #d63384; }
+        .message.ai pre { background: #f8f9fa; border: 1px solid #e9ecef; }
+        .message.ai blockquote { background: rgba(0,123,255,0.05); padding: 5px 10px; }
     </style>
 </head>
 <body>
@@ -62,7 +77,7 @@
 
     function resetChat() {
         chatId = 'user_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('chatId', chatId);
+        //localStorage.setItem('chatId', chatId);
         document.getElementById('chatIdDisplay').innerText = chatId;
         const chatBox = document.getElementById('chatBox');
         chatBox.innerHTML = '';
@@ -75,7 +90,7 @@
         const text = input.value.trim();
         if (!text) return;
 
-        // 添加用户消息（纯文本，防 XSS）
+        // 添加用户消息（现在也支持 Markdown 渲染）
         appendMessage('user', text);
         input.value = '';
         btn.disabled = true;
@@ -85,6 +100,7 @@
         let aiResponseText = '';
 
         try {
+            // 连接到后端 EventSource 流
             const eventSource = new EventSource(`http://localhost:8080/api/chat/stream?chatId=${chatId}&message=${encodeURIComponent(text)}`);
 
             eventSource.onmessage = function(event) {
@@ -99,8 +115,8 @@
                 try {
                     const rawHtml = marked.parse(aiResponseText);
                     aiMsgDiv.innerHTML = DOMPurify.sanitize(rawHtml, {
-                        ALLOWED_TAGS: [...DOMPurify.defaults.ALLOWED_TAGS, 'img'], // 允许图片（按需调整）
-                        ALLOWED_ATTR: [...DOMPurify.defaults.ALLOWED_ATTR, 'src', 'alt'] // 允许图片属性
+                        ALLOWED_TAGS: [...DOMPurify.defaults.ALLOWED_TAGS, 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+                        ALLOWED_ATTR: [...DOMPurify.defaults.ALLOWED_ATTR, 'src', 'alt', 'width', 'height', 'align']
                     });
                 } catch (e) {
                     // 降级为纯文本（保留换行）
@@ -134,17 +150,17 @@
         const div = document.createElement('div');
         div.className = `message ${role}`;
 
-        if (role === 'user') {
-            // 用户消息：纯文本防 XSS
-            div.textContent = text;
-        } else {
-            // AI 消息：初始为空，由流式更新填充
-            if (text) {
-                try {
-                    div.innerHTML = DOMPurify.sanitize(marked.parse(text));
-                } catch {
-                    div.textContent = text;
-                }
+        // 统一使用 Markdown 渲染，无论是用户消息还是 AI 消息
+        if (text) {
+            try {
+                const rawHtml = marked.parse(text);
+                div.innerHTML = DOMPurify.sanitize(rawHtml, {
+                    ALLOWED_TAGS: [...DOMPurify.defaults.ALLOWED_TAGS, 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+                    ALLOWED_ATTR: [...DOMPurify.defaults.ALLOWED_ATTR, 'src', 'alt', 'width', 'height', 'align']
+                });
+            } catch {
+                // 如果 Markdown 解析失败，降级为纯文本
+                div.textContent = text;
             }
         }
 
