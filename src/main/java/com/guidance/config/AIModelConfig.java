@@ -3,6 +3,7 @@ package com.guidance.config;
 import com.guidance.repository.CompatiblePgVectorEmbeddingStore;
 import com.guidance.repository.PureJavaPgVectorStore;
 import com.guidance.service.GovAssistant;
+import com.guidance.service.GovPolicyRetriever;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -10,6 +11,8 @@ import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.dashscope.QwenEmbeddingModel;
 import dev.langchain4j.model.dashscope.QwenStreamingChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.rag.DefaultRetrievalAugmentor;
+import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.service.AiServices;
@@ -101,14 +104,20 @@ public class AIModelConfig {
     @Bean
     ContentRetriever contentRetriever(EmbeddingStore<TextSegment> embeddingStore,
                                       EmbeddingModel embeddingModel) {
-        return EmbeddingStoreContentRetriever.builder()
-                .embeddingStore(embeddingStore)
-                .embeddingModel(embeddingModel)
-                .maxResults(20)//每次在向量数据库中返回的条数，太多容易浪费token，太少容易丢失精度
-                .minScore(0.6)
-                .build();
+        return new GovPolicyRetriever(embeddingStore,embeddingModel);
+//        return EmbeddingStoreContentRetriever.builder()
+//                .embeddingStore(embeddingStore)
+//                .embeddingModel(embeddingModel)
+//                .maxResults(20)//每次在向量数据库中返回的条数，太多容易浪费token，太少容易丢失精度
+//                .minScore(0.6)
+//                .build();
     }
 
+//    @Bean
+//    RetrievalAugmentor retrievalAugmentor(){
+//        return DefaultRetrievalAugmentor.builder()
+//                .build();
+//    }
     /**
      * 6. 构建 AI 服务实例并注入 Spring 容器
      */
@@ -120,6 +129,7 @@ public class AIModelConfig {
                 .streamingChatLanguageModel(chatModel)
                 .chatMemoryProvider(chatMemoryProvider)
                 .contentRetriever(contentRetriever)
+//                .retrievalAugmentor(retrievalAugmentor)
                 .build();
     }
 }

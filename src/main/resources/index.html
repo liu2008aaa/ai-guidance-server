@@ -2,11 +2,14 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Qwen + LangChain4j Stream Chat</title>
+    <title>Qwen + LangChain4j Stream Chat (Markdown)</title>
+    <!-- 引入 Markdown 解析库和安全净化库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f7fa; }
         .chat-container { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .message { padding: 10px 15px; border-radius: 8px; max-width: 80%; line-height: 1.5; }
+        .message { padding: 10px 15px; border-radius: 8px; max-width: 80%; line-height: 1.6; word-wrap: break-word; }
         .user { align-self: flex-end; background: #007bff; color: white; }
         .ai { align-self: flex-start; background: #e9ecef; color: #333; }
         .input-area { margin-top: 20px; display: flex; gap: 10px; }
@@ -14,11 +17,16 @@
         button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
         button:disabled { background: #ccc; }
         .config { margin-bottom: 15px; font-size: 0.9em; color: #666; }
+        /* 优化 Markdown 渲染样式 */
+        .message.ai img { max-width: 100%; border-radius: 4px; }
+        .message.ai pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .message.ai code { font-family: 'Courier New', monospace; background: #f1f3f5; padding: 2px 4px; border-radius: 3px; }
+        .message.ai blockquote { border-left: 3px solid #007bff; padding-left: 10px; margin-left: 0; color: #555; }
     </style>
 </head>
 <body>
 
-<h2>🤖 LangChain4j + Qwen Chat</h2>
+<h2>🤖 LangChain4j + Qwen Chat (Markdown)</h2>
 
 <div class="config">
     当前会话 ID: <span id="chatIdDisplay" style="font-weight:bold"></span>
@@ -26,7 +34,7 @@
 </div>
 
 <div class="chat-container" id="chatBox">
-    <div class="message ai">你好！我是通义千问助手，有什么可以帮你？</div>
+    <!-- 初始欢迎消息改为 JS 动态添加，确保支持 Markdown -->
 </div>
 
 <div class="input-area">
@@ -35,16 +43,30 @@
 </div>
 
 <script>
-    // 生成或获取随机 ChatId 以模拟不同用户
-    let chatId = localStorage.getItem('chatId') || 'user_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('chatId', chatId);
+    // 配置 marked：启用 GitHub 风格 Markdown 和单换行转 <br>
+    marked.setOptions({
+        breaks: true,  // 单换行转 <br>
+        gfm: true      // 启用 GitHub Flavored Markdown
+    });
+
+    // 生成或获取随机 ChatId
+    let chatId = 'user_' + Math.random().toString(36).substr(2, 9);
+    //let chatId = localStorage.getItem('chatId') || 'user_' + Math.random().toString(36).substr(2, 9);
+    //localStorage.setItem('chatId', chatId);
     document.getElementById('chatIdDisplay').innerText = chatId;
+
+    // 初始化欢迎消息（支持 Markdown）
+    window.addEventListener('load', () => {
+        appendMessage('ai', '👋 你好！我是通义千问助手，支持 **Markdown** 格式输出：\n- 代码块 ```java System.out.println("Hello"); ```\n- 列表、链接等\n有什么可以帮你？');
+    });
 
     function resetChat() {
         chatId = 'user_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('chatId', chatId);
         document.getElementById('chatIdDisplay').innerText = chatId;
-        document.getElementById('chatBox').innerHTML = '<div class="message ai">会话已重置。</div>';
+        const chatBox = document.getElementById('chatBox');
+        chatBox.innerHTML = '';
+        appendMessage('ai', '🔄 会话已重置。');
     }
 
     async function sendMsg() {
@@ -53,41 +75,56 @@
         const text = input.value.trim();
         if (!text) return;
 
-        // 1. 添加用户消息到界面
+        // 添加用户消息（纯文本，防 XSS）
         appendMessage('user', text);
         input.value = '';
         btn.disabled = true;
 
-        // 2. 创建AI消息占位符
-        const aiMsgDiv = appendMessage('ai', '...');
+        // 创建 AI 消息容器
+        const aiMsgDiv = appendMessage('ai', '');
         let aiResponseText = '';
 
         try {
-            // 3. 发起 SSE 请求 (EventSource)
             const eventSource = new EventSource(`http://localhost:8080/api/chat/stream?chatId=${chatId}&message=${encodeURIComponent(text)}`);
 
-            // 处理接收到的消息流
             eventSource.onmessage = function(event) {
-                if (aiResponseText === '') aiMsgDiv.innerHTML = ''; // 清除 loading 状态
+                // 首次接收时清空加载提示
+                if (aiResponseText === '') aiMsgDiv.innerHTML = '';
 
-                // 简单的换行处理，实际可以使用 Markdown 解析库 (如 marked.js)
+                // 处理转义换行符（根据后端实际返回调整）
                 const token = event.data.replace(/\\n/g, '\n');
                 aiResponseText += token;
-                aiMsgDiv.innerText = aiResponseText;
 
-                // 自动滚动到底部
-                const chatBox = document.getElementById('chatBox');
-                chatBox.scrollTop = chatBox.scrollHeight;
+                // 安全渲染 Markdown
+                try {
+                    const rawHtml = marked.parse(aiResponseText);
+                    aiMsgDiv.innerHTML = DOMPurify.sanitize(rawHtml, {
+                        ALLOWED_TAGS: [...DOMPurify.defaults.ALLOWED_TAGS, 'img'], // 允许图片（按需调整）
+                        ALLOWED_ATTR: [...DOMPurify.defaults.ALLOWED_ATTR, 'src', 'alt'] // 允许图片属性
+                    });
+                } catch (e) {
+                    // 降级为纯文本（保留换行）
+                    aiMsgDiv.innerText = aiResponseText;
+                    console.warn('Markdown 解析失败，降级为纯文本:', e);
+                }
+
+                // 滚动到底部
+                document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
             };
 
-            eventSource.onerror = function(err) {
+            eventSource.onerror = function() {
                 eventSource.close();
                 btn.disabled = false;
-                console.log("Stream ended or error occurred");
+                if (aiResponseText === '') {
+                    aiMsgDiv.innerHTML = DOMPurify.sanitize(marked.parse('⚠️ 连接中断，请重试。'));
+                }
             };
 
+            eventSource.onopen = function() {
+                // 可选：连接成功提示
+            };
         } catch (error) {
-            aiMsgDiv.innerText = "Error: " + error.message;
+            aiMsgDiv.innerHTML = DOMPurify.sanitize(marked.parse(`❌ 错误: ${error.message}`));
             btn.disabled = false;
         }
     }
@@ -96,7 +133,21 @@
         const chatBox = document.getElementById('chatBox');
         const div = document.createElement('div');
         div.className = `message ${role}`;
-        div.innerText = text;
+
+        if (role === 'user') {
+            // 用户消息：纯文本防 XSS
+            div.textContent = text;
+        } else {
+            // AI 消息：初始为空，由流式更新填充
+            if (text) {
+                try {
+                    div.innerHTML = DOMPurify.sanitize(marked.parse(text));
+                } catch {
+                    div.textContent = text;
+                }
+            }
+        }
+
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
         return div;

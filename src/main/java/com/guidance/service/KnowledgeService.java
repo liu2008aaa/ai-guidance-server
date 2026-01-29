@@ -174,21 +174,22 @@ public class KnowledgeService {
         //构造Segment
         List<TextSegment> textSegmentList = new ArrayList<>();
 
+        //咨询方式
+        textSegmentList.add(new TextSegment(title + "咨询方式: \n" + guideInfo.getServiceInfo().getConsultationMethod(),metadata));
+        //受理条件
+        textSegmentList.add(new TextSegment(title + guideInfo.getAcceptanceConditionsText(),metadata));
         //基本信息
+        textSegmentList.add(new TextSegment(title + "原文链接：\n" + guideInfo.getUrl(),metadata));
         textSegmentList.add(new TextSegment(title + "办理时间: \n" + guideInfo.getServiceInfo().getProcessingTime(),metadata));
         textSegmentList.add(new TextSegment(title + "办理地点: \n" + guideInfo.getServiceInfo().getProcessingLocation(),metadata));
-        textSegmentList.add(new TextSegment(title + "咨询方式: \n" + guideInfo.getServiceInfo().getConsultationMethod(),metadata));
-        //材料清单
+        //所需材料
         textSegmentList.add(new TextSegment(title + guideInfo.getMaterialsText(),metadata));
         //处理流程
 //        textSegmentList.add(new TextSegment(title + guideInfo.getProcessStepsText(),metadata));
         //收费标准
-        textSegmentList.add(new TextSegment(title + guideInfo.getFeeStandardText(),metadata));
-        //受理条件
-        textSegmentList.add(new TextSegment(title + guideInfo.getAcceptanceConditionsText(),metadata));
+//        textSegmentList.add(new TextSegment(title + guideInfo.getFeeStandardText(),metadata));
         //常见问题
 //        textSegmentList.add(new TextSegment(title + guideInfo.getFaqText(),metadata));
-        textSegmentList.add(new TextSegment(title + "引用地址：\n" + guideInfo.getUrl(),metadata));
         return textSegmentList;
     }
     /**
