@@ -48,4 +48,34 @@ public class StringUtils {
         return str.substring(0, endIndex) + SUFFIX;
     }
 
+    /**
+     * 精简区域名称
+     *
+     * @param name
+     * @return
+     */
+    public static String shortAreaName(String name) {
+        if(name == null || name.isBlank()){
+            return name;
+        }
+        name = name.replaceAll("省","");
+        name = name.replaceAll("市","");
+        name = name.replaceAll("州","");
+        name = name.replaceAll("社区","");
+        name = name.replaceAll("区","");
+        name = name.replaceAll("县委","");
+        name = name.replaceAll("县","");
+        name = name.replaceAll("乡","");
+        name = name.replaceAll("镇","");
+        name = name.replaceAll("村","");
+        name = name.replaceAll("街道","");
+        name = name.replaceAll("居民","");
+        name = name.replaceAll("委员会","");
+        name = name.replaceAll("会","");
+        name = name.replaceAll("村民委员会","");
+        name = name.replaceAll("村民","");
+        name = name.replaceAll("管委会","");
+        return name;
+    }
+
 }

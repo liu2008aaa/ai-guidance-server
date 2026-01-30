@@ -32,4 +32,9 @@ debug: false
 
 #爬虫是否开启
 crawl:
-  enable: false
+  #区域信息爬虫
+  area:
+    enable: true
+  #指南信息爬虫
+  guide:
+    enable: false

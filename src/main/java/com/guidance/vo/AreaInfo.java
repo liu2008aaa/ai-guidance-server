@@ -1,5 +1,6 @@
-package com.guidance.service.crawler.vo;
+package com.guidance.vo;
 
+import lombok.Builder;
 import lombok.Data;
 
 /**
@@ -8,11 +9,16 @@ import lombok.Data;
  * @author liuyu
  */
 @Data
+@Builder
 public class AreaInfo {
     /**
      * 区域名称
      */
     private String name;
+    /**
+     * 精简后的名称
+     */
+    private String shortName;
     /**
      * 区域编码
      */
@@ -34,4 +40,6 @@ public class AreaInfo {
      * 4-幸福社区
      */
     private String[] names = new String[5];
+
+
 }

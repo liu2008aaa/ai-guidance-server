@@ -1,4 +1,4 @@
-package com.guidance.service.crawler.vo;
+package com.guidance.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

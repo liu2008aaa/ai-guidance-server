@@ -3,8 +3,8 @@ package com.guidance.service.crawler;
 import com.alibaba.dashscope.utils.JsonUtils;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.guidance.service.crawler.vo.AreaInfo;
-import com.guidance.service.crawler.vo.SummaryInfo;
+import com.guidance.vo.AreaInfo;
+import com.guidance.vo.SummaryInfo;
 import com.guidance.utils.HttpUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -94,9 +94,10 @@ public class SichuanGuideDataCrawler {
             List<AreaInfo> areaInfoList = new ArrayList<>();
             for(int i=0;i<array.size();i++){
                 JsonObject o = array.get(i).getAsJsonObject();
-                AreaInfo info = new AreaInfo();
-                info.setCode(o.get("areaCode").getAsString());
-                info.setName(o.get("shortName").getAsString());
+                AreaInfo info = AreaInfo.builder()
+                                .code(o.get("areaCode").getAsString())
+                                .name(o.get("shortName").getAsString())
+                                .build();
                 areaInfoList.add(info);
             }
             return areaInfoList;

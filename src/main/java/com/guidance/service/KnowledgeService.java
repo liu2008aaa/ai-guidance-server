@@ -2,8 +2,8 @@ package com.guidance.service;
 
 import com.guidance.service.crawler.GovGuideParser;
 import com.guidance.service.crawler.SichuanGuideDataCrawler;
-import com.guidance.service.crawler.vo.AreaInfo;
-import com.guidance.service.crawler.vo.SummaryInfo;
+import com.guidance.vo.AreaInfo;
+import com.guidance.vo.SummaryInfo;
 import com.guidance.utils.StringUtils;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
@@ -13,9 +13,7 @@ import dev.langchain4j.model.output.Response;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -28,7 +26,7 @@ import java.util.concurrent.Executors;
 
 import static com.guidance.service.crawler.SichuanGuideDataCrawler.*;
 
-@ConditionalOnProperty(name = "crawl.enable", havingValue = "true")
+@ConditionalOnProperty(name = "crawl.guide.enable", havingValue = "true")
 @Service
 @Slf4j
 public class KnowledgeService {
@@ -51,13 +49,15 @@ public class KnowledgeService {
         executor.execute(() -> {
             try {
                 Thread.sleep(15000L);
-                AreaInfo parentArea = new AreaInfo();
-                String areaName = "四川省";
-                parentArea.setName(areaName);
-                parentArea.setCode(AREA_CODE_SICHUAN);
                 String[] names = new String[5];
+                String areaName = "四川省";
                 names[0] = areaName;
-                parentArea.setNames(names);
+                AreaInfo parentArea = AreaInfo.builder()
+                        .code(AREA_CODE_SICHUAN)
+                        .name(areaName)
+                        .level(0)
+                        .names(names)
+                        .build();
                 start(parentArea);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -84,7 +84,7 @@ public class KnowledgeService {
                 areaInfo.setLevel(nextLevel);
                 log.info("start process level:{},name:{}", areaInfo.getLevel(), areaInfo.getName());
                 //设置区域名称
-                String[] names = parentArea.getNames();
+                String[] names = parentArea.getNames().clone();
                 names[nextLevel] = areaInfo.getName();
                 //重新赋值
                 areaInfo.setNames(names);
