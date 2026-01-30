@@ -241,7 +241,7 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
 
     private String serializeMetadata(Metadata metadata) {
         if (metadata == null) return "{}";
-        return JsonUtils.toJson(metadata);
+        return JsonUtils.toJson(metadata.toMap());
     }
     /**
      * 查询数据hash是否已存在
