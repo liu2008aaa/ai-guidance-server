@@ -76,7 +76,7 @@ public class SichuanGuideDataCrawler {
             res = HttpUtils.extractJsonFromJsonp(res);
             log.debug("fetchCity.result:{}", res);
             if(ObjectUtils.isEmpty(res)){
-                log.error("fetchAreaInfo result is empty areaCode:{}",code);
+                log.info("fetchAreaInfo result is empty areaCode:{}",code);
                 return null;
             }
             JsonObject jsonObject = JsonUtils.parse(res);
@@ -133,7 +133,7 @@ public class SichuanGuideDataCrawler {
                 totalList.add(SummaryInfo.of(g.getTitle(),g.getUrl()));
             }
             //2秒1页
-            Thread.sleep(2 * 1000L);
+            Thread.sleep(5 * 1000L);
             //递归下一页
             return fetchSummaryInfo(api,code,pageNo+1,totalList);
         }catch (Exception e){

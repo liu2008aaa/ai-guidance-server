@@ -71,10 +71,12 @@ public class StringUtils {
         name = name.replaceAll("街道","");
         name = name.replaceAll("居民","");
         name = name.replaceAll("委员会","");
+        name = name.replaceAll("委员","");
         name = name.replaceAll("会","");
         name = name.replaceAll("村民委员会","");
         name = name.replaceAll("村民","");
         name = name.replaceAll("管委会","");
+        name = name.replaceAll("管委","");
         return name;
     }
 

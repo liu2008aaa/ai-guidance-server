@@ -21,7 +21,7 @@ public class HttpUtils {
     /**
      * 超时时间
      */
-    private final static int TIMEOUT = 15000;
+    private final static int TIMEOUT = 35000;
     /**
      * http get 请求
      *

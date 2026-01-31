@@ -1,6 +1,7 @@
 package com.guidance.repository;
 
 import com.alibaba.dashscope.utils.JsonUtils;
+import com.pgvector.PGvector;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -8,22 +9,26 @@ import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
+import dev.langchain4j.store.embedding.filter.Filter;
+import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.postgresql.util.PGobject;
 
 import javax.sql.DataSource;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
+import static dev.langchain4j.internal.Utils.isNotNullOrBlank;
+import static java.lang.String.format;
+import static java.lang.String.join;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 
 /**
  * PgVector EmbeddingStore implementation compatible with langchain4j-core:0.36.0
  */
+@Slf4j
 public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegment> {
 
     private final DataSource dataSource;
@@ -152,50 +157,102 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
         Embedding queryEmbedding = request.queryEmbedding();
         int maxResults = request.maxResults();
         double minScore = request.minScore();
-        // Note: Filter support is optional in 0.36.0; we skip it for simplicity
+        Filter filter = request.filter();
 
-        String vectorStr = vectorToString(queryEmbedding.vector());
-        double maxDistance = 1.0 - minScore; // cosine distance threshold
+        List<EmbeddingMatch<TextSegment>> result = new ArrayList<>();
+        try (Connection connection = dataSource.getConnection()) {
+            String referenceVector = Arrays.toString(queryEmbedding.vector());
+            String whereClause = "";
+            if(filter instanceof IsEqualTo isEqualTo){
+                String key = isEqualTo.key();
+                Object value = isEqualTo.comparisonValue();
+                String escapedValue = String.valueOf(value).replace("'", "''");
+                escapedValue = "'" + escapedValue + "'";
 
-        String sql = String.format(
-            "SELECT id, embedding, text_content, metadata_json, (1 - (embedding <=> ?::vector)) AS similarity " +
-            "FROM %s " +
-            "WHERE (embedding <=> ?::vector) <= ? " +
-            "ORDER BY embedding <=> ?::vector " +
-            "LIMIT ?",
-            table
-        );
+                key = String.format("(%s::jsonb->>'%s')", "metadata_json",key);
+                whereClause = format("(%s is not null) and (%s = %s)", "metadata_json", key, escapedValue);
+            }
+            whereClause = (whereClause.isEmpty()) ? "" : "AND " + whereClause;
+            log.info("search.whereClause:{}",whereClause);
+            String query = String.format(
+                    "SELECT id, (2 - (embedding <=> '%s')) / 2 AS score, embedding, text_content, %s FROM %s " +
+                            "WHERE round(cast(float8 (embedding <=> '%s') as numeric), 8) <= round(2 - 2 * %s, 8) %s "
+                            + "ORDER BY embedding <=> '%s' LIMIT %s;",
+                    referenceVector,
+                    join(",", "metadata_json"),
+                    table,
+                    referenceVector,
+                    minScore,
+                    whereClause,
+                    referenceVector,
+                    maxResults
+            );
+            log.info("search.sql:{}",query);
+            try (PreparedStatement selectStmt = connection.prepareStatement(query)) {
+                try (ResultSet resultSet = selectStmt.executeQuery()) {
+                    while (resultSet.next()) {
+                        String embeddingId = resultSet.getString("id");
+                        double score = resultSet.getDouble("score");
 
-        List<EmbeddingMatch<TextSegment>> matches = new ArrayList<>();
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                        PGobject vector = (PGobject) resultSet.getObject("embedding");
+                        Embedding embedding = new Embedding(stringToFloatArray(vector));
 
-            ps.setString(1, vectorStr);
-            ps.setString(2, vectorStr);
-            ps.setDouble(3, maxDistance);
-            ps.setString(4, vectorStr);
-            ps.setInt(5, maxResults);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    double similarity = rs.getDouble("similarity");
-                    if (similarity < minScore) continue; // safety check
-
-                    String id = rs.getString("id");
-                    float[] embeddingArray = stringToFloatArray((PGobject) rs.getObject("embedding"));
-                    Embedding embedding = Embedding.from(embeddingArray);
-
-                    String text = rs.getString("text_content");
-                    TextSegment segment = (text != null) ? TextSegment.from(text) : null;
-
-                    matches.add(new EmbeddingMatch<>(similarity, id, embedding, segment));
+                        String text = resultSet.getString("text_content");
+                        TextSegment textSegment = null;
+                        if (isNotNullOrBlank(text)) {
+                            Metadata metadata = decodeMetadata(resultSet.getString("metadata_json"));
+                            textSegment = TextSegment.from(text, metadata);
+                        }
+                        result.add(new EmbeddingMatch<>(score, embeddingId, embedding, textSegment));
+                    }
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Failed to execute search", e);
+            throw new RuntimeException(e);
         }
-
-        return new EmbeddingSearchResult<>(matches);
+        return new EmbeddingSearchResult<>(result);
+//        String vectorStr = vectorToString(queryEmbedding.vector());
+//        double maxDistance = 1.0 - minScore; // cosine distance threshold
+//
+//        String sql = String.format(
+//            "SELECT id, embedding, text_content, metadata_json, (1 - (embedding <=> ?::vector)) AS similarity " +
+//            "FROM %s " +
+//            "WHERE (embedding <=> ?::vector) <= ? " +
+//            "ORDER BY embedding <=> ?::vector " +
+//            "LIMIT ?",
+//            table
+//        );
+//
+//        List<EmbeddingMatch<TextSegment>> matches = new ArrayList<>();
+//        try (Connection conn = dataSource.getConnection();
+//             PreparedStatement ps = conn.prepareStatement(sql)) {
+//
+//            ps.setString(1, vectorStr);
+//            ps.setString(2, vectorStr);
+//            ps.setDouble(3, maxDistance);
+//            ps.setString(4, vectorStr);
+//            ps.setInt(5, maxResults);
+//
+//            try (ResultSet rs = ps.executeQuery()) {
+//                while (rs.next()) {
+//                    double similarity = rs.getDouble("similarity");
+//                    if (similarity < minScore) continue; // safety check
+//
+//                    String id = rs.getString("id");
+//                    float[] embeddingArray = stringToFloatArray((PGobject) rs.getObject("embedding"));
+//                    Embedding embedding = Embedding.from(embeddingArray);
+//
+//                    String text = rs.getString("text_content");
+//                    TextSegment segment = (text != null) ? TextSegment.from(text) : null;
+//
+//                    matches.add(new EmbeddingMatch<>(similarity, id, embedding, segment));
+//                }
+//            }
+//        } catch (SQLException e) {
+//            throw new RuntimeException("Failed to execute search", e);
+//        }
+//
+//        return new EmbeddingSearchResult<>(matches);
     }
 
     // --- Helper Methods ---
@@ -242,6 +299,11 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
     private String serializeMetadata(Metadata metadata) {
         if (metadata == null) return "{}";
         return JsonUtils.toJson(metadata.toMap());
+    }
+
+    private Metadata decodeMetadata(String metadata_json) {
+        if (metadata_json == null) return new Metadata();
+        return JsonUtils.fromJson(metadata_json,Metadata.class);
     }
     /**
      * 查询数据hash是否已存在

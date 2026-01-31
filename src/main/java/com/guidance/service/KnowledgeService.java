@@ -1,5 +1,6 @@
 package com.guidance.service;
 
+import com.guidance.constants.RegionEnum;
 import com.guidance.service.crawler.GovGuideParser;
 import com.guidance.service.crawler.SichuanGuideDataCrawler;
 import com.guidance.vo.AreaInfo;
@@ -70,14 +71,14 @@ public class KnowledgeService {
      *
      * @param parentArea
      */
-    public void start(AreaInfo parentArea) throws InterruptedException {
+    public void start(AreaInfo parentArea){
         //抓取编码下的子集区域编码信息
         List<AreaInfo> infoList = SichuanGuideDataCrawler.fetchAreaInfo(parentArea.getCode());
         if(CollectionUtils.isEmpty(infoList)){
             return;
         }
-        //遍历每个区域
-        for(AreaInfo areaInfo : infoList){
+        //并行遍历每个区域
+        infoList.parallelStream().forEach(areaInfo->{
             try {
                 //设置为：上一级+1
                 int nextLevel = parentArea.getLevel() + 1;
@@ -88,14 +89,18 @@ public class KnowledgeService {
                 names[nextLevel] = areaInfo.getName();
                 //重新赋值
                 areaInfo.setNames(names);
-                //处理
+                //sleep
+                Thread.sleep(5000L);
+                //处理对应的指南信息
                 innerProcess(areaInfo);
+                //sleep
+                Thread.sleep(5000L);
+                //递归该区域的下级
+                start(areaInfo);
             }catch (Exception e){
                 log.error("process has error",e);
             }
-            //递归该区域的下级
-            start(areaInfo);
-        }
+        });
     }
 
     /**
@@ -160,11 +165,11 @@ public class KnowledgeService {
         //构造meta data
         Map<String,String> metaMap = new HashMap<>();
         String[] names = areaInfo.getNames();
-        metaMap.put("province", StringUtils.getStringValue(names[0]));
-        metaMap.put("city", StringUtils.getStringValue(names[1]));
-        metaMap.put("district", StringUtils.getStringValue(names[2]));
-        metaMap.put("street", StringUtils.getStringValue(names[3]));
-        metaMap.put("community", StringUtils.getStringValue(names[4]));
+        metaMap.put(RegionEnum.province.name(), StringUtils.getStringValue(names[0]));
+        metaMap.put(RegionEnum.city.name(), StringUtils.getStringValue(names[1]));
+        metaMap.put(RegionEnum.district.name(), StringUtils.getStringValue(names[2]));
+        metaMap.put(RegionEnum.town.name(), StringUtils.getStringValue(names[3]));
+        metaMap.put(RegionEnum.village.name(), StringUtils.getStringValue(names[4]));
         metaMap.put("full_path", String.join("/", areaInfo.getNames()));
         metaMap.put("title", guideInfo.getTitle());
         metaMap.put("url", guideInfo.getUrl());
@@ -177,7 +182,7 @@ public class KnowledgeService {
         //咨询方式
         textSegmentList.add(new TextSegment(title + "咨询方式: \n" + guideInfo.getServiceInfo().getConsultationMethod(),metadata));
         //受理条件
-        textSegmentList.add(new TextSegment(title + guideInfo.getAcceptanceConditionsText(),metadata));
+//        textSegmentList.add(new TextSegment(title + guideInfo.getAcceptanceConditionsText(),metadata));
         //基本信息
         textSegmentList.add(new TextSegment(title + "原文链接：\n" + guideInfo.getUrl(),metadata));
         textSegmentList.add(new TextSegment(title + "办理时间: \n" + guideInfo.getServiceInfo().getProcessingTime(),metadata));
