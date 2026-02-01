@@ -54,7 +54,7 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
                     "id TEXT PRIMARY KEY, " +
                     "embedding vector(%d), " +
                     "text_content TEXT, " +
-                    "metadata_json TEXT," +
+                    "metadata_json jsonb," +
                     "content_hash TEXT" +
                 ")",
                 table, dimension
@@ -115,7 +115,7 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
 
         String sql =
             "INSERT INTO " + table + " (id, embedding, text_content, metadata_json,content_hash) " +
-            "VALUES (?, ?::vector, ?, ?,?) " +
+            "VALUES (?, ?::vector, ?, ?::jsonb,?) " +
             "ON CONFLICT (id) DO UPDATE SET " +
             "embedding = EXCLUDED.embedding, " +
             "text_content = EXCLUDED.text_content, " +
