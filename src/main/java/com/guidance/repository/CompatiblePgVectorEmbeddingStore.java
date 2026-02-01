@@ -1,7 +1,6 @@
 package com.guidance.repository;
 
 import com.alibaba.dashscope.utils.JsonUtils;
-import com.pgvector.PGvector;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;

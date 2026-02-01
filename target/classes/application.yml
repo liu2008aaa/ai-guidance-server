@@ -37,4 +37,4 @@ crawl:
     enable: false
   #指南信息爬虫
   guide:
-    enable: true
+    enable: false
