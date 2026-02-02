@@ -42,6 +42,11 @@ public class AIModelConfig {
      */
     @Value("${ai-model.model-name}")
     private String modelName;
+    /**
+     * embedding model
+     */
+    @Value("${ai-model.embedding-model}")
+    private String embeddingModel;
 
     /**
      * 向量库存储相关配置
@@ -83,7 +88,7 @@ public class AIModelConfig {
     EmbeddingModel embeddingModel() {
         return QwenEmbeddingModel.builder()
                 .apiKey(apiKey)
-                .modelName("text-embedding-v1")
+                .modelName(embeddingModel)
                 .build();
     }
 
