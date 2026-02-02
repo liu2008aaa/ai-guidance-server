@@ -2,14 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Qwen + LangChain4j Stream Chat (Markdown)</title>
-    <!-- 引入 Markdown 解析库和安全净化库 -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+    <title>Qwen + LangChain4j Stream Chat</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f7fa; }
         .chat-container { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .message { padding: 10px 15px; border-radius: 8px; max-width: 80%; line-height: 1.6; word-wrap: break-word; }
+        .message { padding: 10px 15px; border-radius: 8px; max-width: 80%; line-height: 1.5; }
         .user { align-self: flex-end; background: #007bff; color: white; }
         .ai { align-self: flex-start; background: #e9ecef; color: #333; }
         .input-area { margin-top: 20px; display: flex; gap: 10px; }
@@ -17,31 +14,11 @@
         button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
         button:disabled { background: #ccc; }
         .config { margin-bottom: 15px; font-size: 0.9em; color: #666; }
-
-        /* 优化 Markdown 渲染样式 - 为所有消息统一设置 */
-        .message img { max-width: 100%; border-radius: 4px; }
-        .message pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
-        .message code { font-family: 'Courier New', monospace; background: #f1f3f5; padding: 2px 4px; border-radius: 3px; }
-        .message blockquote { border-left: 3px solid #007bff; padding-left: 10px; margin-left: 0; color: #555; }
-        .message h1, .message h2, .message h3, .message h4 { margin-top: 0.5em; margin-bottom: 0.3em; }
-        .message ul, .message ol { padding-left: 1.5em; margin: 0.5em 0; }
-        .message li { margin: 0.2em 0; }
-        .message p { margin: 0.5em 0; }
-
-        /* 用户消息中的 Markdown 特殊样式 */
-        .message.user code { background: rgba(255,255,255,0.3); }
-        .message.user pre { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
-        .message.user blockquote { border-left-color: rgba(255,255,255,0.7); color: rgba(255,255,255,0.9); }
-
-        /* AI 消息中的 Markdown 特殊样式 */
-        .message.ai code { background: #f1f3f5; color: #d63384; }
-        .message.ai pre { background: #f8f9fa; border: 1px solid #e9ecef; }
-        .message.ai blockquote { background: rgba(0,123,255,0.05); padding: 5px 10px; }
     </style>
 </head>
 <body>
 
-<h2>🤖 LangChain4j + Qwen Chat (Markdown)</h2>
+<h2>🤖 LangChain4j + Qwen Chat</h2>
 
 <div class="config">
     当前会话 ID: <span id="chatIdDisplay" style="font-weight:bold"></span>
@@ -49,7 +26,7 @@
 </div>
 
 <div class="chat-container" id="chatBox">
-    <!-- 初始欢迎消息改为 JS 动态添加，确保支持 Markdown -->
+    <div class="message ai">你好！我是通义千问助手，有什么可以帮你？</div>
 </div>
 
 <div class="input-area">
@@ -58,30 +35,16 @@
 </div>
 
 <script>
-    // 配置 marked：启用 GitHub 风格 Markdown 和单换行转 <br>
-    marked.setOptions({
-        breaks: true,  // 单换行转 <br>
-        gfm: true      // 启用 GitHub Flavored Markdown
-    });
-
-    // 生成或获取随机 ChatId
-    let chatId = 'user_' + Math.random().toString(36).substr(2, 9);
-    //let chatId = localStorage.getItem('chatId') || 'user_' + Math.random().toString(36).substr(2, 9);
-    //localStorage.setItem('chatId', chatId);
+    // 生成或获取随机 ChatId 以模拟不同用户
+    let chatId = localStorage.getItem('chatId') || 'user_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('chatId', chatId);
     document.getElementById('chatIdDisplay').innerText = chatId;
-
-    // 初始化欢迎消息（支持 Markdown）
-    window.addEventListener('load', () => {
-        appendMessage('ai', '👋 你好！我是通义千问助手，支持 **Markdown** 格式输出：\n- 代码块 ```java System.out.println("Hello"); ```\n- 列表、链接等\n有什么可以帮你？');
-    });
 
     function resetChat() {
         chatId = 'user_' + Math.random().toString(36).substr(2, 9);
-        //localStorage.setItem('chatId', chatId);
+        localStorage.setItem('chatId', chatId);
         document.getElementById('chatIdDisplay').innerText = chatId;
-        const chatBox = document.getElementById('chatBox');
-        chatBox.innerHTML = '';
-        appendMessage('ai', '🔄 会话已重置。');
+        document.getElementById('chatBox').innerHTML = '<div class="message ai">会话已重置。</div>';
     }
 
     async function sendMsg() {
@@ -90,57 +53,41 @@
         const text = input.value.trim();
         if (!text) return;
 
-        // 添加用户消息（现在也支持 Markdown 渲染）
+        // 1. 添加用户消息到界面
         appendMessage('user', text);
         input.value = '';
         btn.disabled = true;
 
-        // 创建 AI 消息容器
-        const aiMsgDiv = appendMessage('ai', '');
+        // 2. 创建AI消息占位符
+        const aiMsgDiv = appendMessage('ai', '...');
         let aiResponseText = '';
 
         try {
-            // 连接到后端 EventSource 流
+            // 3. 发起 SSE 请求 (EventSource)
             const eventSource = new EventSource(`http://localhost:8080/api/chat/stream?chatId=${chatId}&message=${encodeURIComponent(text)}`);
 
+            // 处理接收到的消息流
             eventSource.onmessage = function(event) {
-                // 首次接收时清空加载提示
-                if (aiResponseText === '') aiMsgDiv.innerHTML = '';
+                if (aiResponseText === '') aiMsgDiv.innerHTML = ''; // 清除 loading 状态
 
-                // 处理转义换行符（根据后端实际返回调整）
+                // 简单的换行处理，实际可以使用 Markdown 解析库 (如 marked.js)
                 const token = event.data.replace(/\\n/g, '\n');
                 aiResponseText += token;
+                aiMsgDiv.innerText = aiResponseText;
 
-                // 安全渲染 Markdown
-                try {
-                    const rawHtml = marked.parse(aiResponseText);
-                    aiMsgDiv.innerHTML = DOMPurify.sanitize(rawHtml, {
-                        ALLOWED_TAGS: [...DOMPurify.defaults.ALLOWED_TAGS, 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
-                        ALLOWED_ATTR: [...DOMPurify.defaults.ALLOWED_ATTR, 'src', 'alt', 'width', 'height', 'align']
-                    });
-                } catch (e) {
-                    // 降级为纯文本（保留换行）
-                    aiMsgDiv.innerText = aiResponseText;
-                    console.warn('Markdown 解析失败，降级为纯文本:', e);
-                }
-
-                // 滚动到底部
-                document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+                // 自动滚动到底部
+                const chatBox = document.getElementById('chatBox');
+                chatBox.scrollTop = chatBox.scrollHeight;
             };
 
-            eventSource.onerror = function() {
+            eventSource.onerror = function(err) {
                 eventSource.close();
                 btn.disabled = false;
-                if (aiResponseText === '') {
-                    aiMsgDiv.innerHTML = DOMPurify.sanitize(marked.parse('⚠️ 连接中断，请重试。'));
-                }
+                console.log("Stream ended or error occurred");
             };
 
-            eventSource.onopen = function() {
-                // 可选：连接成功提示
-            };
         } catch (error) {
-            aiMsgDiv.innerHTML = DOMPurify.sanitize(marked.parse(`❌ 错误: ${error.message}`));
+            aiMsgDiv.innerText = "Error: " + error.message;
             btn.disabled = false;
         }
     }
@@ -149,21 +96,7 @@
         const chatBox = document.getElementById('chatBox');
         const div = document.createElement('div');
         div.className = `message ${role}`;
-
-        // 统一使用 Markdown 渲染，无论是用户消息还是 AI 消息
-        if (text) {
-            try {
-                const rawHtml = marked.parse(text);
-                div.innerHTML = DOMPurify.sanitize(rawHtml, {
-                    ALLOWED_TAGS: [...DOMPurify.defaults.ALLOWED_TAGS, 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
-                    ALLOWED_ATTR: [...DOMPurify.defaults.ALLOWED_ATTR, 'src', 'alt', 'width', 'height', 'align']
-                });
-            } catch {
-                // 如果 Markdown 解析失败，降级为纯文本
-                div.textContent = text;
-            }
-        }
-
+        div.innerText = text;
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
         return div;
