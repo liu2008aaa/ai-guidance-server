@@ -174,11 +174,10 @@ public class CompatiblePgVectorEmbeddingStore implements EmbeddingStore<TextSegm
             whereClause = (whereClause.isEmpty()) ? "" : "AND " + whereClause;
             log.info("search.whereClause:{}",whereClause);
             String query = String.format(
-                    "SELECT id, (2 - (embedding <=> '%s')) / 2 AS score, embedding, text_content, %s FROM %s " +
+                    "SELECT id, (2 - (embedding <=> '%s')) / 2 AS score, embedding, text_content, metadata_json FROM %s " +
                             "WHERE round(cast(float8 (embedding <=> '%s') as numeric), 8) <= round(2 - 2 * %s, 8) %s "
                             + "ORDER BY embedding <=> '%s' LIMIT %s;",
                     referenceVector,
-                    join(",", "metadata_json"),
                     table,
                     referenceVector,
                     minScore,

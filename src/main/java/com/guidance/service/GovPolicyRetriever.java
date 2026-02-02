@@ -45,7 +45,7 @@ public class GovPolicyRetriever implements ContentRetriever {
         String userInputText = query.text();
         log.info("[retrieve] chatId:{},userInputText:{}",query.metadata().chatMemoryId(),userInputText);
         //扩展用户输入，追加上次输入
-        String expandText = expandQuery(query);
+        String expandText = userInputText;//expandQuery(query);
         log.info("[retrieve] chatId:{},embedding.content:{}",query.metadata().chatMemoryId(),expandText);
         //调用大模型计算向量
         Embedding embeddedQuery = embeddingModel.embed(expandText).content();
@@ -53,7 +53,7 @@ public class GovPolicyRetriever implements ContentRetriever {
         EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
                 .queryEmbedding(embeddedQuery)
                 .maxResults(20)//返回最多20条向量匹配后的数据
-                .minScore(0.65)
+                .minScore(0.7)
                 .filter(makeFilter(userInputText))//区域过滤器
                 .build();
         //向量数据库搜索
