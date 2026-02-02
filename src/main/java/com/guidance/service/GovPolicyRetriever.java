@@ -120,6 +120,7 @@ public class GovPolicyRetriever implements ContentRetriever {
         if(regionResult == null){
             return null;
         }
+        log.info("regionResult:{}",regionResult);
         // 构建 filter
         List<Filter> regionFilters = new ArrayList<>();
         if(isNotNullOrBlank(regionResult.province)){
