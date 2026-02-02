@@ -4,6 +4,7 @@ server:
 ai-model:
   api-key: "sk-aa68faaa357b41ab8eeeb91cc7556165"
   model-name: "qwen-max" # 可换为 qwen-plus、qwen-turbo
+  embedding-model: "text-embedding-v4" #
 
 # 向量数据库配置
 rag:
@@ -37,4 +38,4 @@ crawl:
     enable: false
   #指南信息爬虫
   guide:
-    enable: false
+    enable: true
