@@ -2,6 +2,7 @@ package com.guidance.controller;
 
 import com.guidance.service.GovAssistant;
 import dev.langchain4j.service.TokenStream;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -13,6 +14,7 @@ import java.util.concurrent.Executors;
 @RestController
 @RequestMapping("/api/chat")
 @CrossOrigin // 允许跨域调试
+@Slf4j
 public class ChatController {
 
     private final GovAssistant assistant;

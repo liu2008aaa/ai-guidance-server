@@ -72,10 +72,11 @@ public class GovPolicyRetriever implements ContentRetriever {
      * @return
      */
     private String expandQuery(Query query) {
+        int maxLen = embeddingModel.dimension();
         //获取用户历史对话信息
         List<ChatMessage> chatMessageList = query.metadata().chatMemory();
         if(CollectionUtils.isEmpty(chatMessageList)){
-            return truncateWithSuffix(query.text(),2048);
+            return truncateWithSuffix(query.text(),maxLen);
         }
         StringBuilder sb = new StringBuilder();
         sb.append(query.text());
@@ -103,7 +104,7 @@ public class GovPolicyRetriever implements ContentRetriever {
                 }
             }
         }
-        return truncateWithSuffix(sb.toString(),2048);
+        return truncateWithSuffix(sb.toString(),maxLen);
     }
 
     /**

@@ -1,16 +1,28 @@
 server:
   port: 8080
+
+
 #AI大模型配置项(Qwen)
-ai-model:
+qwen-model:
   api-key: "sk-aa68faaa357b41ab8eeeb91cc7556165"
   model-name: "qwen-max" # 可换为 qwen-plus、qwen-turbo
-  embedding-model: "text-embedding-v4" #
+  embedding-model: "text-embedding-v4"
+
+#spring-ai 本地模型
+ollama:
+  base-url: http://localhost:11434
+  model-name: qwen2.5:7b
 
 # 向量数据库配置
 rag:
   pgvector:
     table: gov_embeddings
-    dimension: 1024 # 注意：Qwen text-embedding-v1 的维度是 1536,text-embedding-v4 的维度是 1024
+
+#本地向量模型
+embedding:
+  model:
+    path: D:\web3-java\ai-guidance-server\src\main\resources\models\model.onnx
+    tokenizer-path: D:\web3-java\ai-guidance-server\src\main\resources\models\tokenizer.json
 
 spring:
   datasource:
