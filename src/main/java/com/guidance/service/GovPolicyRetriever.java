@@ -102,8 +102,6 @@ public class GovPolicyRetriever implements ContentRetriever {
                     }
                 }
             }
-            //仅获取上一条会话内容
-            break;
         }
         return truncateWithSuffix(sb.toString(),2048);
     }
