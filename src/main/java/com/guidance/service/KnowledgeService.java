@@ -3,9 +3,9 @@ package com.guidance.service;
 import com.guidance.constants.RegionEnum;
 import com.guidance.service.crawler.GovGuideParser;
 import com.guidance.service.crawler.SichuanGuideDataCrawler;
+import com.guidance.utils.StringUtils;
 import com.guidance.vo.AreaInfo;
 import com.guidance.vo.SummaryInfo;
-import com.guidance.utils.StringUtils;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -175,20 +175,16 @@ public class KnowledgeService {
         metaMap.put("url", guideInfo.getUrl());
         Metadata metadata = Metadata.from(metaMap);
         //给内容定义相同的事项title
-        String title = "[事项] " + guideInfo.getTitle() + "\n";
+        String title = "【事项】" + guideInfo.getTitle() + "\n";
+        //所需材料
+        title += guideInfo.getMaterialsText() + "\n";
+        title += "咨询方式: \n" + guideInfo.getServiceInfo().getConsultationMethod() + "\n";
+        title += "办理地点: \n" + guideInfo.getServiceInfo().getProcessingLocation() + "\n";
+        title += "办理时间: \n" + guideInfo.getServiceInfo().getProcessingTime() + "\n";
+        title += "原文链接：\n" + guideInfo.getUrl() + "\n";
         //构造Segment
         List<TextSegment> textSegmentList = new ArrayList<>();
-
-        //咨询方式
-        textSegmentList.add(new TextSegment(title + "咨询方式: \n" + guideInfo.getServiceInfo().getConsultationMethod(),metadata));
-        //受理条件
-//        textSegmentList.add(new TextSegment(title + guideInfo.getAcceptanceConditionsText(),metadata));
-        //基本信息
-        textSegmentList.add(new TextSegment(title + "原文链接：\n" + guideInfo.getUrl(),metadata));
-        textSegmentList.add(new TextSegment(title + "办理时间: \n" + guideInfo.getServiceInfo().getProcessingTime(),metadata));
-        textSegmentList.add(new TextSegment(title + "办理地点: \n" + guideInfo.getServiceInfo().getProcessingLocation(),metadata));
-        //所需材料
-        textSegmentList.add(new TextSegment(title + guideInfo.getMaterialsText(),metadata));
+        textSegmentList.add(new TextSegment(title,metadata));
         //处理流程
 //        textSegmentList.add(new TextSegment(title + guideInfo.getProcessStepsText(),metadata));
         //收费标准

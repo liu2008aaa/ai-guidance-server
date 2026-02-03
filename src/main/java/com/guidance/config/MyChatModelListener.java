@@ -25,9 +25,10 @@ public class MyChatModelListener implements ChatModelListener {
             if(msg.type() == ChatMessageType.USER ){
                 UserMessage userMessage =  ((UserMessage)msg);
                 if(!CollectionUtils.isEmpty(userMessage.contents())){
+
                     for(Content content : userMessage.contents()){
                         if(TEXT == content.type()){
-                            log.info("user-text-message: {}",((TextContent)content).text());
+                            log.info("user-text-message-{}:{}",Thread.currentThread().getName(),((TextContent)content).text());
                             continue;
                         }
                         log.info("user-other-message: {}",content);

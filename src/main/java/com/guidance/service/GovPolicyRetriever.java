@@ -45,14 +45,14 @@ public class GovPolicyRetriever implements ContentRetriever {
         String userInputText = query.text();
         log.info("[retrieve] chatId:{},userInputText:{}",query.metadata().chatMemoryId(),userInputText);
         //扩展用户输入，追加上次输入
-        String expandText = userInputText;//expandQuery(query);
+        String expandText = expandQuery(query);
         log.info("[retrieve] chatId:{},embedding.content:{}",query.metadata().chatMemoryId(),expandText);
         //调用大模型计算向量
         Embedding embeddedQuery = embeddingModel.embed(expandText).content();
         //构建查询器
         EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
                 .queryEmbedding(embeddedQuery)
-                .maxResults(20)//返回最多20条向量匹配后的数据
+                .maxResults(5)//返回最多20条向量匹配后的数据
                 .minScore(0.7)
                 .filter(makeFilter(userInputText))//区域过滤器
                 .build();
@@ -80,7 +80,6 @@ public class GovPolicyRetriever implements ContentRetriever {
         }
         StringBuilder sb = new StringBuilder();
         sb.append(query.text());
-        sb.append("\n");
         //会话内容倒序
         for(int i = chatMessageList.size() - 1; i >=0 ; i--){
             ChatMessage chatMessage = chatMessageList.get(i);
