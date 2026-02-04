@@ -1,7 +1,9 @@
 package com.guidance.service;
 
 import com.guidance.constants.RegionEnum;
+import com.guidance.repository.AreaInfoStore;
 import com.guidance.utils.RegionExtractorByHanLP;
+import com.guidance.vo.AreaInfo;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.data.segment.TextSegment;
@@ -22,7 +24,6 @@ import java.util.List;
 
 import static com.guidance.utils.StringUtils.truncateWithSuffix;
 import static dev.langchain4j.internal.Utils.isNotNullOrBlank;
-import static dev.langchain4j.internal.Utils.isNullOrBlank;
 import static dev.langchain4j.store.embedding.filter.MetadataFilterBuilder.metadataKey;
 import static java.util.stream.Collectors.toList;
 
@@ -35,10 +36,13 @@ import static java.util.stream.Collectors.toList;
 public class GovPolicyRetriever implements ContentRetriever {
     private final EmbeddingStore<TextSegment> embeddingStore;
     private final EmbeddingModel embeddingModel;
+    private final AreaInfoStore areaInfoStore;
 
-    public GovPolicyRetriever(EmbeddingStore<TextSegment> embeddingStore,EmbeddingModel embeddingModel){
+
+    public GovPolicyRetriever(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel, AreaInfoStore areaInfoStore){
         this.embeddingStore = embeddingStore;
         this.embeddingModel = embeddingModel;
+        this.areaInfoStore = areaInfoStore;
     }
     @Override
     public List<Content> retrieve(Query query) {
@@ -52,7 +56,7 @@ public class GovPolicyRetriever implements ContentRetriever {
         //构建查询器
         EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
                 .queryEmbedding(embeddedQuery)
-                .maxResults(5)//返回最多20条向量匹配后的数据
+                .maxResults(5)//返回最多5条向量匹配后的数据
                 .minScore(0.7)
                 .filter(makeFilter(userInputText))//区域过滤器
                 .build();
@@ -112,7 +116,7 @@ public class GovPolicyRetriever implements ContentRetriever {
      * @param userInputText
      * @return
      */
-    public static Filter makeFilter(String userInputText) {
+    public Filter makeFilter(String userInputText) {
         //解析区域信息
         RegionExtractorByHanLP.RegionResult regionResult = RegionExtractorByHanLP.parseAddress(userInputText);
         if(regionResult == null){
@@ -124,13 +128,30 @@ public class GovPolicyRetriever implements ContentRetriever {
         if(isNotNullOrBlank(regionResult.province)){
             regionFilters.add(metadataKey(RegionEnum.province.name()).isEqualTo(regionResult.province));
         }else if(isNotNullOrBlank(regionResult.city)){
-            regionFilters.add(metadataKey(RegionEnum.city.name()).isEqualTo(regionResult.city));
+            //单独处理广汉市
+            if(regionResult.city.contains("广汉")){
+                regionFilters.add(metadataKey(RegionEnum.district.name()).isEqualTo(regionResult.city));
+            }else{
+                regionFilters.add(metadataKey(RegionEnum.city.name()).isEqualTo(regionResult.city));
+            }
         }else if(isNotNullOrBlank(regionResult.district)){
             regionFilters.add(metadataKey(RegionEnum.district.name()).isEqualTo(regionResult.district));
         }else if(isNotNullOrBlank(regionResult.town)){
             regionFilters.add(metadataKey(RegionEnum.town.name()).isEqualTo(regionResult.town));
         }else if(isNotNullOrBlank(regionResult.village)){
             regionFilters.add(metadataKey(RegionEnum.village.name()).isEqualTo(regionResult.village));
+        }else if(isNotNullOrBlank(regionResult.original)){
+            //分词是区域信息且不带有市、区、县等特征后缀时，查询数据库
+            AreaInfo areaInfo = areaInfoStore.queryLevelByShortName(regionResult.original);
+            if(areaInfo!=null){
+                switch (areaInfo.getLevel()){
+                    case 0: regionFilters.add(metadataKey(RegionEnum.province.name()).isEqualTo(areaInfo.getName()));break;
+                    case 1: regionFilters.add(metadataKey(RegionEnum.city.name()).isEqualTo(areaInfo.getName()));break;
+                    case 2: regionFilters.add(metadataKey(RegionEnum.district.name()).isEqualTo(areaInfo.getName()));break;
+                    case 3: regionFilters.add(metadataKey(RegionEnum.town.name()).isEqualTo(areaInfo.getName()));break;
+                    case 4: regionFilters.add(metadataKey(RegionEnum.village.name()).isEqualTo(areaInfo.getName()));break;
+                }
+            }
         }
         return buildAndFilter(regionFilters);
     }

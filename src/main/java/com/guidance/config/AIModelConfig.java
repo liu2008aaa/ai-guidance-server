@@ -1,5 +1,6 @@
 package com.guidance.config;
 
+import com.guidance.repository.AreaInfoStore;
 import com.guidance.repository.CompatiblePgVectorEmbeddingStore;
 import com.guidance.repository.PureJavaPgVectorStore;
 import com.guidance.service.GovAssistant;
@@ -142,8 +143,8 @@ public class AIModelConfig {
      */
     @Bean
     ContentRetriever contentRetriever(EmbeddingStore<TextSegment> embeddingStore,
-                                      EmbeddingModel embeddingModel) {
-        return new GovPolicyRetriever(embeddingStore,embeddingModel);
+                                      EmbeddingModel embeddingModel,AreaInfoStore areaInfoStore) {
+        return new GovPolicyRetriever(embeddingStore,embeddingModel,areaInfoStore);
 //        return EmbeddingStoreContentRetriever.builder()
 //                .embeddingStore(embeddingStore)
 //                .embeddingModel(embeddingModel)

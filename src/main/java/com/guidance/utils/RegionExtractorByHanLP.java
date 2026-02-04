@@ -5,6 +5,7 @@ import com.hankcs.hanlp.seg.Segment;
 import com.hankcs.hanlp.seg.common.Term;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -47,15 +48,13 @@ public class RegionExtractorByHanLP {
                 if (nature.startsWith("ns") || isLikelyLocation(word)) {
                     if (word.matches(".*(省|自治区)$")) {
                         result.province = word;
-                    } else if (word.matches(".*(市|自治州)$")) {
+                    } else if (word.matches(".*(市|州|自治州)$")) {
                         result.city = word;
-                    } else if (word.matches(".*(区|县|旗|市)$")) {
-                        // 注意：这里的“市”可能属于县级市，逻辑上排在市/州之后
-                        if (result.city.isEmpty()) result.city = word;
-                        else result.district = word;
+                    } else if (word.matches(".*(区|县|旗|管委会|经开区|自治县)$")) {
+                        result.district = word;
                     } else if (word.matches(".*(镇|乡|街道|苏木)$")) {
                         result.town = word;
-                    } else if (word.matches(".*(村|社区|里|组|弄|巷)$")) {
+                    } else if (word.matches(".*(村|社区|里|组|弄|巷|管委会|居委会)$")) {
                         result.village = word;
                     } else {
                         result.original = word;
@@ -71,7 +70,7 @@ public class RegionExtractorByHanLP {
 
     // 辅助判断：即使 HanLP 没标出 ns，带这些后缀的通常也是地址
     private static boolean isLikelyLocation(String word) {
-        return word.matches(".*(省|市|区|县|镇|乡|街道|村|社区|组)$");
+        return word.matches(".*(省|市|区|县|旗|镇|乡|街道|村|社区|组|州|会|管委会|居委会|经开区|自治县)$");
     }
 
     /**

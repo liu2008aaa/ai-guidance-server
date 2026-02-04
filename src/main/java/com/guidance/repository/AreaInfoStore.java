@@ -1,21 +1,14 @@
 package com.guidance.repository;
 
 import com.alibaba.dashscope.utils.JsonUtils;
-import com.google.gson.reflect.TypeToken;
 import com.guidance.vo.AreaInfo;
-import dev.langchain4j.data.message.*;
-import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import jakarta.annotation.PostConstruct;
-import org.apache.commons.codec.digest.DigestUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.guidance.utils.StringUtils.shortAreaName;
 
@@ -24,6 +17,7 @@ import static com.guidance.utils.StringUtils.shortAreaName;
  * @author liuyu
  */
 @Component
+@Slf4j
 public class AreaInfoStore{
     private final DataSource dataSource;
     private final JdbcTemplate jdbcTemplate;
@@ -56,21 +50,30 @@ public class AreaInfoStore{
     }
 
     /**
-     * 查询 所有
+     * 根据缩略名 查询 区域级别
      *
      * @return
      */
-    public List<AreaInfo> queryAll() {
-        String sql = "SELECT * FROM area_info";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
-            String code = rs.getString("code");
-            String name = rs.getString("name");
-            String shortName = rs.getString("short_name");
-            int level = rs.getInt("level");
-            String namesStr = rs.getString("names");
-            String[] names = JsonUtils.fromJson(namesStr,String[].class);
-            return AreaInfo.builder().code(code).name(name).shortName(shortName).level(level).names(names).build();
-        });
+    public AreaInfo queryLevelByShortName(String shorName) {
+        String sql = "SELECT name,code,short_name,level,names FROM area_info WHERE short_name = ? ";
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, shorName);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String code = rs.getString("code");
+                    String name = rs.getString("name");
+                    String shortName = rs.getString("short_name");
+                    int level = rs.getInt("level");
+                    String namesStr = rs.getString("names");
+                    String[] names = JsonUtils.fromJson(namesStr,String[].class);
+                    return AreaInfo.builder().code(code).name(name).shortName(shortName).level(level).names(names).build();
+                }
+            }
+        } catch (Exception e) {
+            log.error("queryLevelByShortName has error",e);
+        }
+        return null;
     }
 
     /**
